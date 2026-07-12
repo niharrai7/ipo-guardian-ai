@@ -1,0 +1,230 @@
+================================================================
+SECURITY & AUTHENTICATION SPECIFICATION
+================================================================
+Context: this platform handles unpublished, price-sensitive,
+pre-IPO company information — financials, promoter family data,
+litigation history, vendor contracts — before it becomes public.
+This is one of the most sensitive categories of data in Indian
+capital markets, so security cannot be an afterthought bolted on
+later; it has to be designed to be strong, smooth for the user,
+and cost-efficient enough to actually run inside a hackathon-
+scale MVP without needing enterprise infrastructure spend.
+
+Guiding principle: strong security does not have to mean
+friction. The two goals (secure + smooth) are achieved by putting
+the security cost into infrastructure and design choices upfront,
+not into repeated manual friction for the user.
+
+--------------------------------------------------------------
+1. AUTHENTICATION — BOTH INTERFACES
+--------------------------------------------------------------
+ 1.1 Identity Verification at Onboarding (one-time cost, not
+     recurring friction)
+     - Company/Promoter (Interface A): PAN + Aadhaar-based
+       e-KYC verification at signup (via a DigiLocker/UIDAI-
+       compliant KYC API), plus company CIN verification against
+       MCA21 — this ties every account to a real, verifiable legal
+       identity before any document work begins
+     - Intermediary (Interface B): verification against SEBI's own
+       registered intermediary databases — merchant bankers,
+       legal counsel (via Bar Council/firm registration), and
+       auditors (via ICAI membership number) are validated against
+       their respective official registers before an account is
+       activated
+     - This one-time verification is the expensive step, but it
+       only happens once per account — everyday logins stay light
+
+ 1.2 Everyday Login — Multi-Factor, Low Friction
+     - Primary: password/passkey + OTP (SMS or authenticator app)
+     - Passkey/biometric (WebAuthn/FIDO2) support for repeat users
+       on registered devices — after the first verified login,
+       subsequent logins can be a fingerprint/face tap instead of
+       re-typing OTPs, which keeps it fast without weakening
+       security, since passkeys are phishing-resistant by design
+     - Risk-based step-up authentication: routine logins from a
+       recognized device/location stay low-friction; anything
+       unusual (new device, new location, high-value action like
+       document certification or fund-allocation edits) triggers
+       an additional verification step automatically, rather than
+       adding friction to every single action
+
+ 1.3 Role-Based Access Control (RBAC)
+     - Interface A accounts: promoter/company-level access only
+       to their own filing — no visibility into other companies'
+       documents
+     - Interface B accounts: access scoped by role and by which
+       filing they've been assigned to — a merchant banker sees
+       full document access, a specific auditor sees only the
+       financial sections relevant to their certification, etc.
+     - Every certification/sign-off action is tied to the
+       authenticated identity of the specific individual, not a
+       shared "legal team" login — this is what makes the final
+       audit trail legally meaningful
+
+ 1.4 Cost-Efficient Implementation Approach
+     - Rather than building identity/KYC infrastructure from
+       scratch, use existing, India-specific, pay-per-verification
+       KYC/eSign providers (e.g., DigiLocker-integrated KYC APIs,
+       Aadhaar eSign providers) — this keeps cost proportional to
+       actual usage instead of large fixed infrastructure spend,
+       which matters for an SME-facing platform where keeping
+       overall cost low is part of the mission itself
+     - Standard OAuth 2.0 / OpenID Connect for session management
+       instead of a custom-built auth system — reduces both
+       development cost and security risk, since these are
+       widely audited, well-understood protocols rather than
+       bespoke code that would need its own security review
+
+--------------------------------------------------------------
+2. ENCRYPTION
+--------------------------------------------------------------
+ 2.1 In Transit
+     - TLS 1.3 for all client-server communication across both
+       interfaces, with HSTS enforced (no fallback to unencrypted
+       connections)
+
+ 2.2 At Rest
+     - AES-256 encryption for all stored documents, financial
+       data, and personal data (promoter family details, PAN,
+       Aadhaar references)
+     - Field-level encryption for the most sensitive fields
+       specifically (PAN, Aadhaar reference numbers, bank/vendor
+       account details) — so even in the unlikely event of a
+       database-level compromise, these specific fields remain
+       separately protected
+
+ 2.3 Key Management
+     - Encryption keys managed through a dedicated key management
+       service (KMS), separate from the application database —
+       keys are never stored alongside the data they encrypt
+     - Key rotation on a defined schedule, with access to key
+       operations itself logged and restricted to a minimal set
+       of service roles (not individual employees)
+
+ 2.4 Document-Level Protection
+     - Once an intermediary certifies and locks a document
+       (Stage 3), that version becomes immutable and additionally
+       hashed — any future access or export is logged, and the
+       hash lets anyone verify the certified document hasn't been
+       altered after sign-off
+
+--------------------------------------------------------------
+3. SECURE IN-APP COMMUNICATION (Company ↔ Intermediary)
+--------------------------------------------------------------
+ 3.1 Why this needs its own protection layer
+     - Communication between the company and the merchant
+       banker/legal/auditor team (clarification requests, comment
+       threads, flag resolutions) will often reference the same
+       sensitive data as the document itself — so it needs the
+       same security standard, not a lighter one just because
+       it's "just messaging"
+
+ 3.2 Design
+     - All in-app messages and official posts are encrypted at
+       rest and in transit using the same standards as the
+       documents themselves (Section 2)
+     - Messages are scoped to a specific filing and thread — no
+       open-ended chat outside the context of a specific
+       document/section, which limits the blast radius of any
+       compromise and keeps every message traceable to a specific
+       clause/flag it relates to
+     - Every message, edit, and comment is part of the same
+       immutable audit trail as document changes — timestamped,
+       attributed to a verified identity, and exportable for
+       regulatory review if ever required
+
+ 3.3 Access Control on Communication
+     - Only accounts with an active, verified role on that
+       specific filing can read or post in its thread — enforced
+       by the same RBAC system as document access (Section 1.3)
+     - No email/SMS forwarding of sensitive message content —
+       notifications alert the user that a new message exists,
+       but the content itself stays inside the authenticated
+       platform, reducing exposure through less-secure external
+       channels
+
+--------------------------------------------------------------
+4. LEGAL FRAMEWORKS THIS DESIGN IS BUILT TO SATISFY
+--------------------------------------------------------------
+ 4.1 SEBI Cybersecurity and Cyber Resilience Framework (CSCRF)
+     - SEBI's consolidated cybersecurity framework for regulated
+       entities, structured around five resilience goals:
+       Anticipate, Withstand, Contain, Recover, Evolve
+     - Explicitly calls for data encryption, multi-factor
+       authentication, real-time security monitoring, and a Zero
+       Trust access model ("deny by default, permit only after
+       authentication") for critical systems — this platform's
+       MFA + RBAC + encryption design is built to align with
+       exactly these expectations from day one, rather than
+       needing a security retrofit later
+     - Mandates incident reporting formats and periodic audits by
+       CERT-In-empanelled auditors for in-scope regulated
+       entities — worth stating in the pitch that the platform's
+       audit-trail-by-design approach (every action logged,
+       attributed, and exportable) directly supports this kind of
+       audit requirement even before the platform itself is a
+       formally regulated entity
+
+ 4.2 Information Technology Act, 2000 (IT Act)
+     - Section 43A requires body corporates handling sensitive
+       personal data to maintain "reasonable security practices
+       and procedures" — encryption, access control, and audit
+       logging (as designed here) are the standard way this
+       obligation is met in practice
+     - Section 72A penalizes disclosure of personal information
+       without consent in breach of a lawful contract — relevant
+       given the platform handles promoter and family-relation
+       personal data
+
+ 4.3 Digital Personal Data Protection Act, 2023 (DPDP Act) and
+     DPDP Rules, 2025
+     - The DPDP Act and Rules were notified in November 2025 and
+       are being brought into force in phases, with core
+       compliance obligations (security safeguards, breach
+       notification, data principal rights) taking full effect in
+       May 2027 — meaning any platform handling personal data
+       today should already be building toward these standards
+     - Key obligations directly relevant here: mandatory
+       "reasonable security safeguards" to prevent personal data
+       breaches, a 72-hour breach notification requirement to
+       affected individuals and the Data Protection Board, defined
+       data retention/erasure practices, and consent-based
+       processing of personal data (directly relevant to the
+       promoter family/relative data collected for the Promoter
+       Group Network Mapper)
+     - Building consent capture and data retention limits into
+       the platform from the start (rather than retrofitting
+       later) is both a compliance necessity and a credible point
+       to make to judges, since most competing teams likely won't
+       have thought about this
+
+ 4.4 India's Digital Public Infrastructure (DPI) / API Setu
+     Framework
+     - Since the platform integrates with MCA21, E-Courts, and
+       GSTIN verification through India's Open API/DPI framework,
+       it inherits the security and access-governance standards
+       those government API gateways already enforce for
+       consuming applications — reinforcing that data verification
+       flows aren't ad-hoc scraping, but structured, governed API
+       access
+
+--------------------------------------------------------------
+5. WHY THIS APPROACH IS "SMOOTH AND COST-EFFICIENT," NOT JUST
+   SECURE
+--------------------------------------------------------------
+ - Identity verification cost is front-loaded once per account
+   (KYC at signup), not repeated per session — everyday use is
+   fast (passkey/biometric + risk-based step-up only when needed)
+ - Using established protocols (OAuth2/OIDC, standard KMS, pay-
+   per-use KYC APIs) instead of custom-built security
+   infrastructure keeps both engineering cost and audit/compliance
+   risk low — you're relying on already-hardened, widely used
+   components rather than reinventing them
+ - Scoped, thread-based messaging (rather than open-ended chat)
+   keeps the audit and encryption surface small and manageable,
+   which keeps both security review effort and infrastructure
+   cost proportional to what the platform actually needs
+
+================================================================
+END OF FILE
+================================================================

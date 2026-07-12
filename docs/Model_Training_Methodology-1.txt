@@ -1,0 +1,333 @@
+================================================================
+MODEL TRAINING METHODOLOGY
+Generator + Verifier Architecture for SME IPO Offer Document AI
+================================================================
+
+--------------------------------------------------------------
+0. WHY TWO MODELS, NOT ONE
+--------------------------------------------------------------
+A single model that both drafts and checks its own work inherits
+its own blind spots — it cannot reliably catch errors it was
+confident enough to generate. So the AI layer itself (Stage 2 in
+your architecture) is split into two internally distinct models
+with different objectives, different training data, and different
+failure modes, so they don't fail in the same way at the same time:
+
+  MODEL 1 — GENERATOR ("The Drafter")
+    Task: turn structured promoter inputs into SEBI-standard
+    disclosure prose and structured tables.
+
+  MODEL 2 — VERIFIER / INSPECTOR ("The Auditor")
+    Task: given a drafted section + source data, independently
+    judge whether it is compliant, consistent, and traceable —
+    NOT by re-generating it, but by scoring and flagging it.
+
+This mirrors how real DRHP review works: one team drafts, a
+separate team (legal/compliance) checks — you're just building
+that separation into the model layer before it even reaches your
+human Stage 3.
+
+--------------------------------------------------------------
+1. DATA SOURCES
+--------------------------------------------------------------
+Data sources are split into CORE (the two datasets each model is
+actually trained/fine-tuned on) and SUPPORTING (used for
+retrieval grounding, cross-validation, or supplementary signal).
+This split matters for the pitch: judges should see that each
+model has one clean, defensible, directly-sourced training
+corpus — not a vague blend of "various data."
+
+ 1.1 CORE DATASET — GENERATOR
+     Real RHP / DRHP filings, sourced directly from:
+       - SEBI's public filings database (DRHPs and final RHPs
+         for mainboard issuers)
+       - NSE Emerge (SME platform filing archive)
+       - BSE SME (SME platform filing archive)
+     Why this is the right core dataset:
+       - These are the actual regulator-accepted, final-form
+         documents — i.e., the real target output distribution
+         the Generator needs to learn to produce
+       - SME-platform filings specifically (NSE Emerge / BSE SME)
+         are the closest possible match to your target use case,
+         since your platform is built for SME issuers, not
+         mainboard ones — training primarily on SME-scale RHPs
+         means the model learns the right length, complexity, and
+         disclosure depth expected for this issuer category
+       - Chapter-aligned extraction (Business Overview, Risk
+         Factors, Objects of the Issue, Basis for Issue Price,
+         Financial Statements) gives clean (structured input →
+         approved narrative output) training pairs per section,
+         as described in Section 3
+
+ 1.2 CORE DATASET — VERIFIER
+     SEBI Observation Letters, issued against DRHPs before final
+     RHP approval.
+     Why this is the right core dataset:
+       - Each observation letter is effectively regulator-labeled
+         negative-example data: it states, in the regulator's own
+         words, exactly what was insufficient, missing, unclear,
+         or inconsistent in a given DRHP
+       - This is the closest thing to ground-truth "what counts as
+         a compliance gap" data available anywhere publicly — no
+         other source gives you real regulator judgment at this
+         granularity
+       - Pairing each observation letter with its corresponding
+         DRHP gives (flawed draft, specific deficiency, clause
+         reference) triples — exactly the training format the
+         Verifier's classification task needs (Section 4.2)
+
+ 1.3 SUPPORTING — Regulatory Text Corpus (for RAG, not fine-tuning
+     — used by both models at inference time, not as training data)
+     - SEBI ICDR Regulations (Issue of Capital and Disclosure
+       Requirements)
+     - SEBI SME/ICDR framework and applicable circulars/master
+       circulars
+     - This is kept as a retrieval knowledge base, not baked into
+       model weights, so it can be updated the moment SEBI issues
+       an amendment without retraining
+
+ 1.4 SUPPORTING — Structured/Financial Data
+     - Restated financial statements, extracted from the same
+       core RHP corpus (1.1) — not a separate source, just a
+       different extraction pass over it, used to teach numeric
+       consistency patterns
+     - Public company financial data APIs (for peer-comparison
+       training/validation, e.g., listed SME peer multiples)
+
+ 1.5 SUPPORTING — Synthetic Negative Examples (augments the
+     Verifier's core dataset, does not replace it)
+     - Real observation letters (1.2) are the ground truth, but
+       are finite in number — to get enough training volume,
+       take clean, approved RHP text from the core Generator
+       corpus (1.1) and deliberately corrupt it (swap numbers
+       between chapters, remove a mandatory clause, insert an
+       unsubstantiated buzzword) to generate additional labeled
+       "bad" examples at scale
+     - Framed correctly in the pitch as: "real observation letters
+       define what deficiency categories look like; synthetic
+       corruption gives us volume within those same categories" —
+       not a separate, invented data source
+
+--------------------------------------------------------------
+2. DATA CLEANING & PREPROCESSING PIPELINE
+--------------------------------------------------------------
+ Step 1 — Document Ingestion
+   - OCR (for scanned/older filings) + native PDF/text extraction
+   - Strip headers, footers, page numbers, watermarks
+
+ Step 2 — Structural Segmentation
+   - Split each DRHP into its canonical chapters (Business
+     Overview, Risk Factors, Financial Statements, Objects of the
+     Issue, Basis for Issue Price, Promoter/Promoter Group, etc.)
+   - Use heading detection (regex + layout-based) since DRHPs
+     follow a fairly consistent SEBI-mandated structure
+
+ Step 3 — Entity Tagging (shared with your Rules Engine)
+   - Named Entity Recognition to tag financial figures, dates,
+     entity names, percentages
+   - This produces the same variable_x tagging format used in
+     your Cross-Sectional Data Matching Engine, so training data
+     and production data share one schema
+
+ Step 4 — Deduplication & Noise Removal
+   - Remove boilerplate legal disclaimers that are near-identical
+     across filings (low training signal, risk of overfitting to
+     fixed phrases) — keep them as templates, not training targets
+   - Remove duplicate or near-duplicate filings from the same
+     issuer across amendments (keep only the final approved
+     version, unless explicitly building a "revision history" task)
+
+ Step 5 — Alignment / Pairing
+   - For the Generator: pair structured input fields (financials,
+     business description tags) with the corresponding approved
+     narrative output — this becomes your input→output training
+     pair
+   - For the Verifier: pair a document section with (a) a
+     compliance label derived from whether it matches the
+     SEBI-required schema, and (b) any linked observation-letter
+     deficiency, and (c) synthetically corrupted negative variants
+
+ Step 6 — Anonymization Layer (for hackathon-safe handling)
+   - Since RHPs and observation letters are both public documents,
+     this step is mainly about hygiene, not privacy law — but for
+     a demo, mask real company names in a training subset so the
+     model doesn't overfit to memorizing specific company facts,
+     and instead generalizes the disclosure pattern learned from
+     the core NSE Emerge / BSE SME / SEBI corpus
+
+--------------------------------------------------------------
+3. MODEL 1 — GENERATOR ("The Drafter")
+--------------------------------------------------------------
+ 3.1 Base Model
+   - Start from a strong pretrained LLM (open-weight, e.g., a
+     Llama/Mistral-class model, or an API-based foundation model)
+     rather than training from scratch — training from scratch is
+     infeasible at hackathon scale and unnecessary
+
+ 3.2 Training Technique: Supervised Fine-Tuning (SFT) +
+     Retrieval-Augmented Generation (RAG)
+   - SFT on (structured input → approved narrative output) pairs
+     teaches the model SEBI's expected tone, structure, and
+     phrasing patterns
+   - RAG grounds every generation call in the current SEBI ICDR
+     text + the promoter's own uploaded data, so the model isn't
+     relying purely on memorized patterns — it retrieves the
+     actual applicable clause before drafting each section
+   - Parameter-efficient fine-tuning (LoRA / QLoRA) is the
+     realistic hackathon approach — full fine-tuning of a large
+     model is unnecessary and resource-heavy; LoRA adapters
+     trained on the DRHP corpus are enough to specialize style and
+     structure while keeping the base model's general reasoning
+
+ 3.3 Constrained / Grounded Generation
+   - The Generator is restricted to only using facts present in
+     the tagged input variables (variable_revenue_FY26, etc.) —
+     implemented via prompt-level grounding + a post-generation
+     fact-consistency check (does every number in the output
+     trace back to an input variable?)
+   - This directly reduces hallucination risk, which is the single
+     biggest credibility objection judges will raise
+
+ 3.4 Task Decomposition
+   - Rather than one monolithic "write the whole DRHP" prompt, the
+     Generator is called per-section (Risk Factors, Business
+     Overview, Objects of the Issue, etc.) with section-specific
+     fine-tuned adapters or prompts — smaller, more controllable
+     generation tasks, easier to verify, easier to demo
+
+--------------------------------------------------------------
+4. MODEL 2 — VERIFIER / INSPECTOR ("The Auditor")
+--------------------------------------------------------------
+ 4.1 Task Framing
+   - NOT a generative task — framed as classification + extraction:
+     given a drafted section (+ source data + retrieved regulation
+     text), output a structured judgment, not free text
+
+ 4.2 Training Technique: Multi-Label Classification + Fine-Tuned
+     Cross-Encoder
+   - A cross-encoder model (jointly reads [drafted text, source
+     data, regulation clause] together) trained to output:
+     compliant / non-compliant / needs-human-review, per clause
+   - Multi-label classification head trained on the labeled
+     dataset from Section 1.5 (real SEBI observation letter
+     deficiencies + synthetic corruptions) — each label
+     corresponds to a deficiency type (missing disclosure,
+     numeric mismatch, unsubstantiated claim, materiality
+     under-flagging, etc.)
+
+ 4.3 Why It's Separate From the Rules Engine
+   - The hardcoded Rules Engine (Stage 1, deterministic) catches
+     structural/numeric issues with certainty (schema checks,
+     entity mismatches) — those don't need ML at all, and
+     shouldn't, because they must be 100% reliable
+   - The Verifier Model handles the fuzzier judgment calls the
+     Rules Engine can't hardcode: "is this risk factor phrased
+     with SEBI-standard severity," "does this narrative claim
+     match the tone of previously approved filings," "is this
+     explanation of litigation risk adequately specific" — pattern
+     -based judgment, trained on real historic SEBI feedback
+
+ 4.4 Confidence & Explainability Output
+   - Every Verifier judgment includes:
+     - a confidence score
+     - the specific regulation clause it checked against (via the
+       same RAG index used by the Generator, so both models share
+       one source of truth)
+     - a short extracted justification, e.g., "flagged: revenue
+       concentration risk described but does not meet SEBI's
+       standard specificity threshold seen in comparable approved
+       filings"
+   - This feeds directly into your Interface B Compliance
+     Dashboard and Confidence Scoring (already in your
+     architecture spec)
+
+--------------------------------------------------------------
+5. HOW THE TWO MODELS INTERACT (Inference-Time Loop)
+--------------------------------------------------------------
+ 1. Structured input (tagged variables) → Generator drafts section
+ 2. Draft → Rules Engine (deterministic) does structural/numeric
+    pass first (cheap, fast, catches hard errors immediately)
+ 3. Draft that passes Rules Engine → Verifier Model does the
+    fuzzier compliance/quality judgment pass
+ 4. If Verifier flags an issue below a confidence threshold →
+    routed back to Generator with the specific flag as additional
+    context for a re-draft attempt (self-correction loop, capped
+    at N retries to avoid infinite loops)
+ 5. If Verifier flags an issue it can't resolve with high
+    confidence, OR after retry cap is reached → escalated directly
+    to the human Intermediary Workbench (Stage 3), never silently
+    auto-approved
+
+This retry loop is worth explicitly diagramming in your pitch —
+it shows the AI attempting self-correction before ever bothering
+a human, which is a strong "efficiency" selling point.
+
+--------------------------------------------------------------
+6. OUTPUT FORMAT
+--------------------------------------------------------------
+Every pipeline run outputs a structured JSON object per section,
+not just prose — this is what makes the two interfaces and audit
+trail possible:
+
+{
+  "section": "Risk Factors",
+  "drafted_text": "...",
+  "source_variables_used": ["variable_revenue_FY26", "variable_customer_concentration"],
+  "rules_engine_status": "pass",
+  "verifier_status": "needs_human_review",
+  "verifier_confidence": 0.62,
+  "verifier_flags": [
+    {
+      "type": "materiality_specificity",
+      "clause_reference": "SEBI ICDR Schedule VI, Risk Factors",
+      "justification": "Concentration risk stated without quantified percentage"
+    }
+  ],
+  "retry_count": 1,
+  "last_modified_by": "generator_model_v1",
+  "audit_trail": [ ... ]
+}
+
+This structured output is what gets rendered differently in each
+interface (plain summary for the promoter, full detail for the
+intermediary) and is what gets exported as the final audit trail
+once a human certifies and locks the document.
+
+--------------------------------------------------------------
+7. EVALUATION / DEMO METRICS
+--------------------------------------------------------------
+For the hackathon demo, define measurable metrics judges can see:
+ - Generator: % of drafted facts traceable to source input
+   variables (fact-consistency rate)
+ - Verifier: precision/recall against your held-out labeled set
+   of real SEBI observation-letter deficiencies + synthetic errors
+ - End-to-end: time-to-first-complete-draft on your one concrete
+   demo scenario (e.g., a textile manufacturer SME IPO), and
+   number of issues caught pre-submission vs. what would typically
+   surface as a SEBI clarification query post-submission
+
+--------------------------------------------------------------
+8. HACKATHON-SCALE FEASIBILITY NOTE
+--------------------------------------------------------------
+You will not train these from scratch or fine-tune a huge model
+in the time available — and you don't need to claim you will. For
+the idea round, the credible framing is:
+ - Generator: RAG + prompting + LoRA fine-tuning on a modest
+   curated set of real RHP sections pulled from SEBI, NSE Emerge,
+   and BSE SME filing archives (dozens to low hundreds of
+   examples is enough to demonstrate the concept)
+ - Verifier: a smaller classifier trained on the labeled
+   deficiency dataset built from SEBI observation letters (core)
+   + synthetic corruption of the same RHP corpus (volume booster)
+   — feasible to build a working proof-of-concept for one or two
+   chapters (e.g., Risk Factors + Objects of the Issue) within a
+   hackathon build window
+ - Explicitly state in your pitch that full-corpus training and
+   coverage of all DRHP chapters is the production roadmap beyond
+   the hackathon — judges respect a team that's clear about what's
+   prototyped vs. what's the long-term vision, rather than
+   overclaiming a fully trained production system already exists
+
+================================================================
+END OF FILE
+================================================================

@@ -1,0 +1,359 @@
+================================================================
+AI-ASSISTED SME IPO OFFER DOCUMENT PLATFORM
+FULL SYSTEM ARCHITECTURE, PIPELINE & ENGINE SPECIFICATION
+(For hackathon idea submission — SEBI Securities Market TechSprint)
+================================================================
+
+--------------------------------------------------------------
+0. ONE-LINE PITCH
+--------------------------------------------------------------
+A dual-interface, three-layer drafting platform where an AI engine
+accelerates offer-document creation, a hardcoded compliance-rules
+engine validates it against SEBI's ICDR/SME framework, and only
+certified intermediaries (merchant bankers, legal counsel, auditors)
+can review, edit and finally lock the document for regulatory
+submission — reducing DRHP preparation time and pre-empting the
+manual clarification queries SEBI currently has to issue.
+
+--------------------------------------------------------------
+1. HIGH-LEVEL SYSTEM ARCHITECTURE
+--------------------------------------------------------------
+
+                    ┌─────────────────────────┐
+                    │   COMPANY / PROMOTER     │
+                    │   INTERFACE (Interface A)│
+                    └───────────┬─────────────┘
+                                │  structured inputs,
+                                │  documents, financials,
+                                │  vendor quotes, family tree
+                                ▼
+                 ┌────────────────────────────────┐
+                 │        STAGE 1: HARDCODED       │
+                 │        RULES ENGINE             │
+                 │  (deterministic validation,     │
+                 │   API calls, schema checks)      │
+                 └───────────┬────────────────────┘
+                             │ cleaned + tagged data
+                             ▼
+                 ┌────────────────────────────────┐
+                 │        STAGE 2: AI / ML         │
+                 │        DRAFTING ENGINE          │
+                 │ (LLM + NER + RAG + fine-tuned    │
+                 │  risk/narrative generation)      │
+                 └───────────┬────────────────────┘
+                             │ draft offer document +
+                             │ flags + confidence scores
+                             ▼
+                 ┌────────────────────────────────┐
+                 │  CROSS-VALIDATION LOOP           │
+                 │  (Rules engine re-checks AI      │
+                 │   output before it reaches humans)│
+                 └───────────┬────────────────────┘
+                             │
+                             ▼
+                    ┌─────────────────────────┐
+                    │  INTERMEDIARY WORKBENCH  │
+                    │  (Interface B)            │
+                    │  Merchant Banker / Legal / │
+                    │  Auditor                  │
+                    └───────────┬─────────────┘
+                                │ STAGE 3: MANUAL REVIEW,
+                                │ redline, comment, certify
+                                ▼
+                    ┌─────────────────────────┐
+                    │  CERTIFIED / LOCKED       │
+                    │  DRHP READY FOR SEBI      │
+                    │  SUBMISSION                │
+                    └─────────────────────────┘
+
+Core principle: AI drafts, rules validate, humans certify.
+No document can move to submission-ready status without an
+explicit human sign-off action that cryptographically locks it.
+
+--------------------------------------------------------------
+2. INTERFACE A — COMPANY / PROMOTER PORTAL
+--------------------------------------------------------------
+Purpose: Let a first-time SME promoter with no capital-markets
+expertise input everything needed, in plain language, without
+knowing SEBI terminology upfront.
+
+Modules:
+ 2.1 Guided Onboarding Wizard
+     - Sector selection, business model description, cap table
+     - Plain-language Q&A that maps to legal disclosure fields
+       behind the scenes (promoter never sees "Schedule XI" etc.)
+
+ 2.2 Financial Data Upload
+     - Restated financial statements (XLSX/PDF ingestion)
+     - Auto-extraction of Revenue, PAT, EPS, RoNW, NAV via the
+       Entity Extraction module (see Section 4.2)
+
+ 2.3 Promoter Group Family Tree Builder
+     - Interactive node-based tree: promoter enters spouse,
+       parents, siblings, and any entity where they/relatives
+       hold a stake or directorship
+     - Feeds directly into the Promoter Group Network Mapper
+       (Section 4.5) for hidden related-party detection
+
+ 2.4 Objects of the Issue / Fund Utilization Portal
+     - Line-item fund allocation table
+     - Vendor quote upload (OCR-parsed) for each capex item
+     - Real-time GSTIN validity check per vendor
+     - Auto-reconciliation: sum of vendor quotes vs. stated
+       fund allocation (see Section 4.6)
+
+ 2.5 Live Completeness Tracker
+     - Dashboard showing "% disclosure-complete" per chapter
+       (Business Overview, Risk Factors, Financials, Basis for
+       Issue Price, Objects of the Issue, Promoter Group, etc.)
+     - Red / amber / green status per section based on Stage 1
+       rule checks
+
+ 2.6 Draft Preview (read-only)
+     - Company can see the AI-generated draft and completeness
+       score, but CANNOT edit disclosure language directly —
+       edits are routed as "clarification requests" back to the
+       intake forms, preserving data integrity for the
+       intermediary's review
+
+--------------------------------------------------------------
+3. INTERFACE B — INTERMEDIARY WORKBENCH
+--------------------------------------------------------------
+Purpose: Give merchant bankers, legal counsel, and auditors a
+professional-grade review environment — not a black box, but a
+transparent, auditable decision-support tool.
+
+Modules:
+ 3.1 Clause-by-Clause Compliance Dashboard
+     - Every paragraph tagged with the SEBI ICDR clause / SME
+       disclosure requirement it satisfies
+     - Flags shown inline: "Missing utilization certification —
+       Objects of the Issue, Clause X"
+
+ 3.2 Redline & Comment Layer
+     - Track-changes style editing directly on AI-drafted text
+     - Threaded comments per flagged item, assignable to
+       legal / auditor / banker roles
+
+ 3.3 Cross-Check Alert Panel
+     - Surfaces every mismatch caught by the Data Matching
+       Engine (Section 4.3) — e.g., revenue figure inconsistency
+       between narrative and financial tables — with exact
+       source location of both instances
+
+ 3.4 Third-Party Due-Diligence Panel
+     - MCA21 director/company status results
+     - Struck-off / insolvency / disqualification flags
+     - E-Courts litigation matches against reported litigation
+     - GSTIN status of vendors and group entities
+
+ 3.5 Risk Factor Review Panel
+     - AI-drafted, SEBI-standard-phrased risk factors shown
+       alongside the underlying data trigger (e.g., "60% revenue
+       concentration in 2 buyers → Risk Factor auto-generated")
+     - Materiality threshold shown so reviewer can see why an
+       item was/wasn't escalated
+
+ 3.6 Peer Group Comparison Validator
+     - Auto-fetched competitor P/E, RoNW, EPS, NAV table
+       (Section 4.4) with source attribution, editable by banker
+
+ 3.7 Certification & Lock Action
+     - Role-based sign-off (Legal certifies X, Auditor certifies
+       financials, Merchant Banker gives final certification)
+     - Once all required certifications are collected, document
+       status changes to "Locked — Submission Ready"
+     - Full audit trail of who changed what, when, and why is
+       exportable (regulatory defensibility)
+
+--------------------------------------------------------------
+4. STAGE 1 — HARDCODED RULES ENGINE (Deterministic Layer)
+--------------------------------------------------------------
+This is the non-negotiable, non-AI validation backbone. It runs
+BEFORE and AFTER the AI drafting stage, and nothing reaches the
+intermediary without passing through it.
+
+ 4.1 Mandatory Disclosure Structural Check
+     - Schema validation (JSON schema per SEBI ICDR/SME chapter
+       requirement) confirming every required section exists
+     - Missing section (e.g., no utilization certification in
+       "Objects of the Issue") → hard validation flag, blocks
+       progression
+
+ 4.2 Entity Extraction & Tagging
+     - RegEx + structured parsing tags every critical numeric
+       fact (Revenue, PAT, Litigation value, Promoter Share
+       Count) as a variable (e.g., variable_revenue_FY26) that
+       persists across the entire document graph
+
+ 4.3 Cross-Sectional Data Matching Engine
+     - Entity-Relationship Graph maps every instance of a tagged
+       variable across chapters (Business Overview, Financial
+       Statements, Basis for Issue Price)
+     - Any mismatch (e.g., ₹120.5 Cr in narrative vs. ₹120.48 Cr
+       in restated financials) triggers a strict logic alert and
+       halts workflow progression until resolved
+
+ 4.4 Prohibited Buzzword / Unquantified Claim Filter
+     - Dictionary + pattern match against subjective claims
+       ("market leader," "state-of-the-art," "rapidly growing")
+     - Auto-strips or flags unless a verified third-party source
+       link is attached
+
+ 4.5 Promoter Group Network Mapper (Rules component)
+     - Cross-references promoter-declared family tree against
+       MCA21 database results
+     - Flags any directorship/shareholding found in MCA data that
+       was NOT declared by the promoter — prevents hidden
+       related-party transaction issues
+
+ 4.6 Expenditure Verification Module
+     - Matches vendor quote sum totals exactly against the
+       stated fund allocation table
+     - Confirms vendor GSTIN is active
+     - Blocks progression if reconciliation fails
+
+ 4.7 Third-Party Due-Diligence API Layer
+     - MCA21 / API Setu (or commercial KYB providers — Decentro,
+       Sandbox, AuthBridge) for director & company status
+     - E-Courts / legal-tech aggregator queries (LegalKart,
+       Precydent, vLex) for litigation cross-matching
+     - GSTIN verification APIs for tax/filing status
+     - Any "struck off," "defunct," or active insolvency status
+       on a linked entity → automatic critical red flag BEFORE
+       legal counsel review
+
+ 4.8 Materiality Gating Logic
+     - Hardcoded thresholds determine whether an asset
+       concentration, litigation claim, or customer concentration
+       is material enough to require a highlighted Risk Factor
+     - Escalation is rule-driven, not left to AI judgment, so it
+       is consistent and auditable
+
+--------------------------------------------------------------
+5. STAGE 2 — AI / ML DRAFTING ENGINE
+--------------------------------------------------------------
+This layer generates content ONLY within the guardrails set by
+Stage 1. It never overrides a hardcoded rule; it drafts language
+that must still pass rule validation before reaching Interface B.
+
+ 5.1 Semantic & Compliance Parser
+     - LLM + NER models identify what has been said vs. what is
+       legally required, using a RAG vector database built on
+       up-to-date SEBI ICDR/SME guidelines
+     - Vectorized paragraph comparison against "Mandatory
+       Disclosure" embeddings to detect gaps in tone/content
+       even when structurally present
+
+ 5.2 Narrative Drafting Model
+     - Converts promoter's plain-language inputs into
+       SEBI-standard disclosure prose (Business Overview,
+       Management Discussion, etc.)
+     - Constrained generation: cannot introduce claims not
+       present in source data (prevents hallucinated figures)
+
+ 5.3 Context-Aware Risk Factor Generator
+     - Multi-label text classification + a domain-finetuned LLM
+       trained on historic SEBI observation letters and past
+       DRHP datasets
+     - Reads financial restatements + industry sector to surface
+       risk patterns (e.g., customer concentration, raw material
+       cost volatility) and drafts them under standard SEBI risk
+       headings ("We are heavily dependent on...")
+     - Works hand-in-hand with the Materiality Gating rule (4.8)
+       — AI proposes, rules engine confirms escalation
+
+ 5.4 Peer Group Comparison Engine
+     - Identifies likely listed competitor peers from business
+       description embeddings
+     - Pulls live valuation multiples (P/E, RoNW, EPS, NAV) via
+       financial data APIs to auto-populate the "Basis for Issue
+       Price" comparison table
+
+ 5.5 Confidence Scoring
+     - Every AI-generated clause carries a confidence/source-
+       traceability score, visible to the intermediary in
+       Interface B, so reviewers know which sections need the
+       closest scrutiny
+
+--------------------------------------------------------------
+6. STAGE 3 — MANUAL / HUMAN-IN-THE-LOOP LAYER
+--------------------------------------------------------------
+ 6.1 Role-based review queue: Legal, Auditor, Merchant Banker
+     each see only the sections relevant to their certification
+     responsibility, plus a full-document view
+
+ 6.2 Escalation Protocol
+     - Critical red flags (struck-off entity, undisclosed
+       related party, reconciliation failure) require explicit
+       resolution before any certification can be granted
+
+ 6.3 Final Certification & Immutable Lock
+     - Multi-signatory sign-off required (mirrors real DRHP
+       certification responsibility split)
+     - Once locked, document + full audit trail (every AI draft,
+       every rule flag, every human edit, every approval) is
+       exportable as a submission-ready package
+
+--------------------------------------------------------------
+7. END-TO-END PIPELINE (SEQUENTIAL FLOW)
+--------------------------------------------------------------
+1. Promoter completes guided onboarding (Interface A)
+2. Stage 1 Rules Engine: structural + entity-tagging validation
+3. Stage 1 API calls: MCA21, E-Courts, GSTIN checks run async
+4. Stage 2 AI Engine: drafts narrative, risk factors, peer
+   comparison table using validated, tagged data
+5. Stage 1 Rules Engine re-runs on AI output: cross-sectional
+   matching, buzzword filter, materiality gating
+6. Document (with all flags + confidence scores) routed to
+   Interface B
+7. Intermediary team reviews, redlines, resolves flags,
+   comments back to promoter if clarification is needed
+   (loop back to step 1 for that data point only)
+8. Role-based certification collected
+9. Document locked, audit trail generated, submission-ready
+   package exported
+
+--------------------------------------------------------------
+8. DATA / API SOURCES (for the "how is this feasible" slide)
+--------------------------------------------------------------
+ - Ministry of Corporate Affairs (MCA21) via API Setu or KYB
+   aggregators (Decentro, Sandbox, AuthBridge) — director &
+   company status, DIN/CIN verification
+ - E-Courts National Portal / legal-tech aggregators
+   (LegalKart, Precydent, vLex) — litigation cross-matching
+ - GSTIN verification APIs — vendor & entity tax status
+ - Financial data APIs (e.g., Moneycontrol, Bloomberg) — listed
+   peer valuation multiples
+ - RAG knowledge base built on SEBI ICDR Regulations, SME
+   listing framework, and historic SEBI observation letters /
+   past DRHP filings (for risk-factor fine-tuning)
+
+Suggested one-line justification for the "is this feasible"
+question: "Our platform uses India's Open-API Digital Public
+Infrastructure and established commercial KYB/legal-tech
+aggregators — the same underlying government datasets SEBI
+itself references — so due diligence checks run pre-submission
+instead of post-submission as regulatory queries."
+
+--------------------------------------------------------------
+9. WHY THIS DIFFERENTIATES THE SUBMISSION
+--------------------------------------------------------------
+ - Directly maps to SEBI's own stated requirements: accessible to
+   non-expert promoters (Interface A), maintains accuracy checks
+   (Rules Engine), preserves intermediary role in review/
+   certification (Interface B + Stage 3 lock)
+ - Addresses the liability objection head-on: AI never has final
+   authority; hardcoded rules gate the AI; humans certify
+ - Concrete, demoable artifacts: two distinct UIs, a visible rule
+   -flag dashboard, a promoter-group network graph, an
+   auto-reconciled fund allocation table — not just "we use an
+   LLM"
+ - Scenario-specific: can be demoed end-to-end on one realistic
+   SME IPO scenario (e.g., a textile manufacturer) to satisfy
+   "demonstrate performance on at least one concrete scenario"
+   style evaluation criteria
+
+================================================================
+END OF FILE
+================================================================

@@ -1,0 +1,149 @@
+================================================================
+STANDOUT FEATURES / KEY DIFFERENTIATORS
+(Judge-facing summary — "the problem is real, and this solves it")
+================================================================
+
+--------------------------------------------------------------
+1. THREE-STAGE ARCHITECTURE
+--------------------------------------------------------------
+ - AI drafts → Hardcoded Rules validate → Human intermediary
+   certifies
+ - No stage has unilateral authority — the AI can never submit
+   anything, the rules can never be overridden silently, and the
+   human is never asked to review a blind, unstructured wall of
+   AI text
+ - Directly answers the core regulatory objection every judge
+   will have: "can we trust AI-drafted disclosure documents?" —
+   answer: you're not trusting the AI alone, you're trusting a
+   system where AI output is gated twice before a human even
+   sees it
+
+--------------------------------------------------------------
+2. DUAL INTERFACE (Company + Intermediary)
+--------------------------------------------------------------
+ - Interface A (Company/Promoter): guided, plain-language,
+   accessible to a first-time SME promoter with zero capital-
+   markets background
+ - Interface B (Merchant Banker / Legal / Auditor): professional
+   review workbench — clause-level compliance view, redlining,
+   flag resolution, role-based certification
+ - Mirrors the real-world division of responsibility in an actual
+   IPO filing instead of collapsing everyone into one generic
+   chat UI
+ - Preserves the exact thing SEBI's own problem statement asks
+   for: intermediaries keep their review and certification role
+
+--------------------------------------------------------------
+3. TWO-STEP AI MODEL (Generator + Verifier) FOR ACCURACY
+--------------------------------------------------------------
+ - Not one model doing everything — a Generator model that drafts,
+   and a separate Verifier model that independently judges the
+   draft, so the system doesn't inherit a single model's blind
+   spots
+ - Generator trained on real, regulator-accepted RHPs from SEBI,
+   NSE Emerge, and BSE SME filing archives
+ - Verifier trained on SEBI Observation Letters — real,
+   regulator-authored records of exactly what was found
+   deficient in past filings
+ - This is the single most defensible data claim in the pitch:
+   both models are trained on real regulatory outcomes, not
+   generic internet text or assumptions about what "good"
+   disclosure looks like
+
+--------------------------------------------------------------
+4. HARDCODED RULES ENGINE (Non-Negotiable Layer)
+--------------------------------------------------------------
+ - Deterministic, not probabilistic — critical checks are never
+   left to AI judgment
+ - Runs both before AI drafting (input validation) and after
+   (output validation), so nothing reaches a human unchecked
+ - This is what makes the platform SEBI-credible rather than
+   "just another AI chatbot" — hard rules for hard requirements,
+   AI only for language generation
+
+--------------------------------------------------------------
+5. UI/UX, SECURITY & AUTHENTICATION
+--------------------------------------------------------------
+ - Purpose-built, role-based UI/UX for non-expert company users —
+   not a generic form, a guided disclosure journey
+ - Strong security and authentication layer for a document
+   handling confidential financials, promoter family data, and
+   pre-IPO material information (details to be finalized —
+   role-based access control, encryption at rest/in transit,
+   audit-logged access)
+
+--------------------------------------------------------------
+6. AI-DETECTED ISSUE TYPES (What the Model Actually Catches)
+--------------------------------------------------------------
+ 6.1 Format & Structural Gaps
+     - Missing mandatory sections or sub-sections per SEBI's
+       required disclosure schema
+
+ 6.2 Entity Extraction + Cross-Check Graph
+     - Every critical figure (revenue, PAT, litigation value,
+       promoter shareholding) tagged as a variable and tracked
+       across every chapter it appears in
+     - Flags mismatches between chapters automatically (e.g., a
+       number that doesn't match itself across the document)
+
+ 6.3 Compliance Classification
+     - Classifies whether each disclosed section meets SEBI's
+       mandatory disclosure requirements, section by section
+
+ 6.4 Buzzword / Unsubstantiated Claim Filter
+     - Detects subjective, unquantified claims ("market leader,"
+       "state-of-the-art," "rapidly growing") — the same category
+       of check SEBI's own review process looks for — and flags or
+       strips them unless backed by a verifiable source
+
+ 6.5 Official Government Source Verification
+     - MCA21 checks: director/company status, DIN/CIN verification
+     - Background / disqualification checks: struck-off,
+       defunct, or insolvency-linked entities flagged automatically
+     - Built on India's Digital Public Infrastructure (DPI)
+       framework (API Setu and equivalent), so verification uses
+       the same underlying government data sources SEBI itself
+       would reference
+
+ 6.6 Automated Financial Data Entry
+     - Stage 1 AI reads uploaded financial records (statements,
+       reports) and auto-populates the relevant document fields,
+       removing manual re-typing and the transcription errors that
+       come with it
+
+ 6.7 Promoter Group / Family Relation Mapping
+     - Maps promoter relatives (spouse, parents, siblings) and
+       associated entities to catch undisclosed related-party
+       connections before they become a SEBI rejection reason
+
+ 6.8 Document Cleanup & Organization
+     - Takes messy, unstructured promoter input and organizes it
+       into the correctly sequenced, properly formatted disclosure
+       document structure
+
+--------------------------------------------------------------
+7. SPECIAL EMPHASIS: OBJECTS OF THE ISSUE + RISK FACTORS
+--------------------------------------------------------------
+ - These two sections are treated as the highest-priority,
+   highest-scrutiny part of the entire platform
+ - Mandatorily routed through all three stages (AI draft → rules
+   validation → human certification) with no shortcut path,
+   regardless of how "complete" the AI's confidence score is
+ - The Generator and Verifier models are specifically trained
+   with extra weight/emphasis on these two sections, because:
+     - Risk Factors: a significant share of real SEBI observation
+       letters relate to inadequate or vague risk factor
+       disclosure — this is where regulator scrutiny concentrates
+       most heavily in practice
+     - Objects of the Issue: requires exact fund-allocation
+       justification, vendor verification, and utilization
+       clarity — one of the most commonly under-specified sections
+       in SME filings
+ - Practical implication for the pitch: "we didn't build one
+   generic AI for the whole document — we identified, from real
+   observation letter data, exactly where SEBI's scrutiny
+   concentrates, and built our most rigorous checks there"
+
+================================================================
+END OF FILE
+================================================================

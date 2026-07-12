@@ -1,0 +1,264 @@
+================================================================
+FRONTEND DESIGN SPEC — DETAILED LAYOUT & STYLE GUIDE
+(For handoff to frontend developer / designer)
+================================================================
+
+--------------------------------------------------------------
+0. DESIGN DIRECTION & RATIONALE
+--------------------------------------------------------------
+Subject: a regulatory-document platform — the product should feel
+like a cross between a well-run law office and a modern fintech
+dashboard: precise, calm, authoritative. Avoid generic "AI startup"
+visual cliches (soft cream backgrounds with orange accents, or
+neon-on-black dashboards) — this is a compliance tool, not a
+consumer app, and should look like it belongs in a regulator's
+world: closer to a digital ledger/certified-document aesthetic
+than a typical SaaS landing page.
+
+Signature element: a "certification seal" motif — a circular
+stamp/lock icon that visually appears when a section or document
+gets certified/locked by the intermediary. This ties the visual
+design directly to the product's core trust mechanic (nothing is
+final until it's certified) and gives the product one memorable,
+ownable visual moment instead of a generic checkmark.
+
+--------------------------------------------------------------
+1. DESIGN TOKENS
+--------------------------------------------------------------
+ 1.1 Color Palette (named, hex values)
+     - Ink Navy       #101B33   — primary text, headers, nav bar
+     - Paper White    #F7F7F5   — main background (cool, not warm
+                                   cream — keeps it crisp/official
+                                   rather than soft/consumer)
+     - Ledger Blue     #1F3A63   — primary brand/action color
+                                   (buttons, links, active states)
+     - Seal Bronze     #A9762F   — signature accent color, used
+                                   ONLY for certification/sign-off
+                                   moments (the stamp motif, locked
+                                   -document badges) — deliberately
+                                   restrained so it stays meaningful
+     - Cleared Green   #2E7D5B   — status: compliant / cleared
+     - Flag Amber      #C98A1D   — status: needs review
+     - Blocked Red     #B3402C   — status: blocked / non-compliant
+     - Neutral Grey    #6B7280   — secondary text, borders, disabled
+
+ 1.2 Typography
+     - Display face (headers, section titles): a serif with
+       authority and slight formality — e.g., "Source Serif 4" or
+       "Newsreader" — evokes official/legal documents without
+       looking dated. Used sparingly: page titles, section headers,
+       the certification moment only.
+     - Body/UI face: a clean, highly legible sans — e.g., "IBM Plex
+       Sans" or "Inter" — for all body text, labels, buttons, form
+       fields
+     - Data/figures face: a monospace or tabular-figure font — e.g.,
+       "IBM Plex Mono" — used specifically for financial figures,
+       IDs, and reference numbers, so numbers align cleanly in
+       tables and read as precise/ledger-like
+     - Type scale (approx): 
+         Display/H1: 32–40px, Serif, semi-bold
+         H2: 24px, Serif, medium
+         H3: 18px, Sans, semi-bold
+         Body: 15–16px, Sans, regular
+         Caption/meta: 13px, Sans, regular, Neutral Grey
+         Data/figures: 14–16px, Mono, tabular-nums
+
+ 1.3 Spacing & Shape
+     - 8px base spacing unit (8/16/24/32/48 scale)
+     - Border radius: small and deliberate (4–6px) — sharp enough
+       to feel official/precise, not the heavily rounded "friendly
+       app" look
+     - Hairline borders (1px, Neutral Grey at low opacity) used to
+       separate document sections — reinforces the "structured
+       document" feeling over floating cards everywhere
+
+ 1.4 Motion
+     - Minimal, purposeful only: progress bar fills smoothly on
+       update, flag markers pulse briefly once when newly added,
+       certification seal has one deliberate "stamp" animation on
+       lock (scale + slight rotation, ~300ms) — this is the one
+       place to spend animation budget
+     - No decorative hover animations elsewhere; keep interactions
+       crisp and immediate
+
+--------------------------------------------------------------
+2. INTERFACE A — COMPANY / PROMOTER PORTAL
+--------------------------------------------------------------
+ 2.1 Global Layout
+     ┌─────────────────────────────────────────────────────────┐
+     │ TOP BAR: Logo | Filing name | Completion % | Profile     │
+     ├───────────────┬─────────────────────────────────────────┤
+     │ LEFT NAV       │  MAIN CONTENT AREA                       │
+     │ (chapter list  │  (active section: guided form / draft   │
+     │  with status   │   preview / upload zone)                 │
+     │  dots: red/    │                                          │
+     │  amber/green)  │                                          │
+     │                │                                          │
+     │ - Business     │                                          │
+     │   Overview  ●  │                                          │
+     │ - Risk         │                                          │
+     │   Factors   ●  │                                          │
+     │ - Objects of   │                                          │
+     │   Issue     ●  │                                          │
+     │ - Financials●  │                                          │
+     │ - Promoter     │                                          │
+     │   Group     ●  │                                          │
+     ├───────────────┴─────────────────────────────────────────┤
+     │ BOTTOM BAR: overall progress bar | predicted completion   │
+     │ time | "Send to Intermediary" CTA (enabled when ready)    │
+     └─────────────────────────────────────────────────────────┘
+
+ 2.2 Left Navigation (Chapter List)
+     - Each chapter row: name + status dot (red = incomplete/
+       flagged, amber = in review, green = cleared)
+     - Small completion % badge per chapter
+     - Click to jump directly to that section
+
+ 2.3 Main Content Area — states per section
+     a) Guided Input State: plain-language form fields, grouped
+        logically, with inline helper text (not legal jargon) —
+        e.g., "How much revenue did you earn last year?" rather
+        than "State FY revenue per Schedule III"
+     b) Upload/Scan State: drag-and-drop + camera/scan capture
+        zone for financial docs, vendor quotes, ID documents;
+        shows OCR extraction preview before confirming ("We read
+        ₹45,00,000 as your FY25 revenue — confirm or edit")
+     c) AI Draft Preview State: read-only drafted narrative text
+        with:
+        - inline highlighted flags (amber underline = needs
+          attention, red underline = blocked/missing)
+        - a side panel per flag: plain-language explanation +
+          recommendation ("This claim needs a number or source —
+          try adding a specific percentage")
+        - confidence indicator per paragraph (subtle dot or bar,
+          not intrusive)
+     d) Cleared State: section shown with a small green seal icon
+        and "Ready for intermediary review"
+
+ 2.4 Financial Data Visualization Panel
+     - Simple bar/line charts (Revenue, PAT, margin trend across
+       years) generated from uploaded financials — sits alongside
+       the Financials chapter, not buried in a separate tab
+     - Uses Cleared Green / Flag Amber sparingly to highlight any
+       year with an anomaly the AI caught (e.g., a sudden margin
+       drop worth flagging)
+
+ 2.5 Progress & Status Elements
+     - Top bar: overall completion % (large, always visible)
+     - Bottom bar: horizontal progress bar (segmented by chapter,
+       color-coded by status) + predicted time to completion
+       ("Approx. 25 minutes remaining based on your pace")
+     - "Send to Intermediary" button: disabled/greyed until a
+       chapter clears Stage 1 rules; enabled state uses Ledger Blue
+
+ 2.6 Organize/Cleanup Assist
+     - A lightweight "Organize My Data" action: promoter can dump
+       unstructured notes/files, and the AI sorts them into the
+       correct chapters — surfaced as a visible action button, not
+       hidden in settings, since it's a genuine differentiator
+
+--------------------------------------------------------------
+3. INTERFACE B — INTERMEDIARY WORKBENCH
+--------------------------------------------------------------
+ 3.1 Global Layout
+     ┌─────────────────────────────────────────────────────────┐
+     │ TOP BAR: Logo | Role (Legal/Auditor/Banker) | Profile     │
+     ├───────────────┬─────────────────────────────────────────┤
+     │ COMPANY LIST   │  ACTIVE FILING VIEW                      │
+     │ (multi-IPO     │  Tabs: Draft | Flags | Comparisons |     │
+     │  dashboard)    │        Due Diligence | Audit Trail       │
+     │                │                                          │
+     │ Company A  ●85%│  [Document body with inline flags,       │
+     │ Company B  ●42%│   redline tools, side panel]              │
+     │ Company C  ●97%│                                          │
+     │                │                                          │
+     ├───────────────┴─────────────────────────────────────────┤
+     │ FOOTER: Accuracy Rate | Correction Rate | Certify & Lock  │
+     └─────────────────────────────────────────────────────────┘
+
+ 3.2 Multi-Company Dashboard (Left Panel)
+     - List of all active filings assigned to this intermediary
+     - Each row: company name, overall completion %, status dot,
+       last-activity timestamp
+     - Sort/filter by status (needs review / awaiting response /
+       ready to certify)
+
+ 3.3 Active Filing View — Tabs
+     a) Draft Tab: full document with inline compliance flags
+        (color-coded), redline/track-changes editing directly on
+        text, comment threads attached to specific clauses
+     b) Flags Tab: consolidated list of every open issue across
+        the filing — sortable by severity, chapter, or type
+        (structural / numeric mismatch / buzzword / materiality)
+     c) Comparisons Tab: peer group valuation table (auto-fetched,
+        editable), side-by-side with company's own metrics
+     d) Due Diligence Tab: MCA21 status, litigation matches, GSTIN
+        checks, promoter group network graph (visual node map)
+     e) Audit Trail Tab: full timestamped history of AI drafts,
+        rule flags, human edits, and messages — exportable
+
+ 3.4 Actions Available Per Flag/Section
+     - "Send Change Request" — routes a specific, clause-level
+       request back to the company's Interface A (appears as a
+       flagged item there, not a vague message)
+     - "Request Clarification" — lighter-weight query, doesn't
+       block progress the way a change request does
+     - "Resolve / Accept" — clears a flag once satisfied
+     - "Escalate" — for critical issues (e.g., struck-off entity
+       found in due diligence) — visually distinct (red banner,
+       cannot be dismissed without explicit resolution)
+
+ 3.5 Accuracy & Correction Metrics (Footer / Filing Header)
+     - Accuracy Rate: % of AI-drafted content that required no
+       correction — shown per filing and as an aggregate across
+       all filings this intermediary has worked on
+     - Correction Rate: inverse view — how much needed editing,
+       broken down by chapter, useful for the intermediary to see
+       where the AI consistently needs the most oversight
+     - These numbers double as a running credibility metric for
+       your pitch: "the system gets measurably better/more trusted
+       over time, and that trust is visible, not just claimed"
+
+ 3.6 Certification & Lock
+     - "Certify & Lock" button — only enabled once all flags in
+       that reviewer's scope are resolved
+     - On click: the "stamp" animation plays (Section 1.4), a
+       Seal Bronze badge appears on the section/document, and it
+       becomes read-only + hashed
+     - Multi-signatory filings show a checklist of which roles
+       have certified and which are still pending
+
+--------------------------------------------------------------
+4. SHARED COMPONENTS (used identically in both interfaces)
+--------------------------------------------------------------
+ - Status Dot / Badge: red / amber / green, consistent meaning
+   everywhere in the product
+ - Flag Card: icon + short label + plain-language explanation +
+   clause reference + action buttons — same visual component
+   whether shown to company or intermediary, just with different
+   available actions
+ - Confidence Indicator: small horizontal bar or dot cluster,
+   subtle, non-intrusive, attached to AI-generated content
+ - Certification Seal: the signature visual element — circular
+   stamp icon in Seal Bronze, appears at chapter and document
+   level once locked
+ - Progress Bar: segmented, color-coded by chapter status
+
+--------------------------------------------------------------
+5. RESPONSIVE / ACCESSIBILITY NOTES
+--------------------------------------------------------------
+ - Interface A should be fully usable on mobile (promoters likely
+   to fill sections on the go) — left nav collapses to a bottom
+   sheet or hamburger menu on small screens
+ - Interface B should be responsive down to tablet at minimum,
+   since intermediaries may review on the move; full multi-column
+   layout reserved for desktop/laptop widths
+ - Maintain visible keyboard focus states throughout (this is a
+   professional/compliance tool — accessibility matters both
+   ethically and as a credibility signal to judges)
+ - Respect reduced-motion settings — disable the stamp animation
+   and progress-bar easing for users with that preference set
+
+================================================================
+END OF FILE
+================================================================

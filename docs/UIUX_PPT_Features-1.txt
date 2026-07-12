@@ -1,0 +1,52 @@
+================================================================
+UI/UX & FRONTEND — PPT SLIDE CONTENT
+================================================================
+
+SLIDE: Design Philosophy
+ - Professional, clean, smooth — trust-first design language
+ - Two purpose-built interfaces, one shared underlying document
+ - Every screen answers one question: "what do I need to do next?"
+
+--------------------------------------------------------------
+SLIDE: Interface A — Company / Promoter Portal
+ - AI-guided document assistant: walks promoter through each
+   section, plain language, no legal jargon upfront
+ - Fill fields directly OR upload/scan documents & images —
+   AI reads and auto-populates matching fields
+ - Real-time mistake detection with plain-language recommendations
+   ("This section needs a quantified figure, not 'rapidly growing'")
+ - One-click "Send to Intermediary" once a section is ready
+ - Live progress bar per chapter + overall document
+ - Red markers on incomplete/flagged sections, green on cleared
+ - Predicted time-to-completion, updated as they work
+ - Completion rate % dashboard (by chapter and overall)
+ - Financial data visualized as simple charts (revenue, PAT trend)
+   instead of raw numbers only
+ - Built-in data organizer: turns messy uploads into structured,
+   correctly sequenced sections automatically
+
+--------------------------------------------------------------
+SLIDE: Interface B — Intermediary Workbench
+ - Professional, multi-company dashboard — manage several IPO
+   filings at once, switch between them instantly
+ - Clause-by-clause review view with inline compliance flags
+ - Redline/comment tools, threaded discussion per flag
+ - One-click "Send Change Request" back to company
+ - "Send For Clarification" / query routing built in
+ - Accuracy rate & correction rate tracked per filing —
+   shows how much AI got right vs. how much needed human fixing
+ - Role-based certification & sign-off actions per section
+ - Full audit trail view, exportable
+
+--------------------------------------------------------------
+SLIDE: Shared Design Principles
+ - Status colors consistent across both interfaces (red = blocked,
+   amber = review needed, green = cleared) — one shared visual
+   language between company and intermediary
+ - Every AI-drafted section shows a confidence indicator
+ - No dead ends: every flag comes with a clear next action
+ - Built mobile-responsive for on-the-go review by intermediaries
+
+================================================================
+END OF FILE
+================================================================
